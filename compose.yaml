@@ -7,3 +7,5 @@ services:
     build: ../summary-worker
     ports:
       - "8001:8000"
+    env_file:
+      - ../summary-worker/.env
