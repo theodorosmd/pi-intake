@@ -1,0 +1,9 @@
+services:
+  call-gateway:
+    build: ../intake-py
+    ports:
+      - "8000:8000"
+  summary-worker:
+    build: ../summary-worker
+    ports:
+      - "8001:8000"
