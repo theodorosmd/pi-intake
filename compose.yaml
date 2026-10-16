@@ -3,6 +3,10 @@ services:
     build: ../intake-py
     ports:
       - "8000:8000"
+    environment:
+      - WORKER_URL=http://summary-worker:8000
+    depends_on:
+      - summary-worker
   summary-worker:
     build: ../summary-worker
     ports:
