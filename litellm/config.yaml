@@ -1,0 +1,18 @@
+# Proxy LiteLLM : une seule adresse pour tous les modèles.
+# L'agent appelle "llm-openai" ou "llm-telnyx" ; le proxy sait où aller et avec quelle clé.
+model_list:
+  - model_name: llm-openai
+    litellm_params:
+      model: openai/gpt-6-luna
+      api_key: os.environ/OPENAI_API_KEY
+
+  - model_name: llm-telnyx
+    litellm_params:
+      # Modèle open-weight servi par Telnyx Inference, via son API compatible OpenAI.
+      # Kimi K2.6 est le modèle par défaut des AI Assistants Telnyx pour la voix.
+      model: openai/moonshotai/Kimi-K2.6
+      api_base: https://api.telnyx.com/v2/ai/openai
+      api_key: os.environ/TELNYX_API_KEY
+
+litellm_settings:
+  drop_params: true   # ignore les paramètres qu'un fournisseur ne connaît pas, au lieu d'échouer
