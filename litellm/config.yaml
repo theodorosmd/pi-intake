@@ -1,18 +1,47 @@
 # Proxy LiteLLM : une seule adresse pour tous les modèles.
-# L'agent appelle "llm-openai" ou "llm-telnyx" ; le proxy sait où aller et avec quelle clé.
+# L'agent demande un nom ("llm-agent") ; le proxy choisit le fournisseur, réessaie, bascule.
+
 model_list:
+  # --- Les deux fournisseurs, appelables directement pour les tests
   - model_name: llm-openai
     litellm_params:
       model: openai/gpt-6-luna
       api_key: os.environ/OPENAI_API_KEY
+    model_info:
+      id: openai-gpt-6-luna
 
   - model_name: llm-telnyx
     litellm_params:
-      # Modèle open-weight servi par Telnyx Inference, via son API compatible OpenAI.
-      # Kimi K2.6 est le modèle par défaut des AI Assistants Telnyx pour la voix.
+      # Open-weight servi par Telnyx Inference, API compatible OpenAI, même clé que la téléphonie.
       model: openai/moonshotai/Kimi-K2.6
       api_base: https://api.telnyx.com/v2/ai/openai
       api_key: os.environ/TELNYX_API_KEY
+    model_info:
+      id: telnyx-kimi-k2-6
+
+  # --- Le nom que l'agent utilisera : OpenAI d'abord, Telnyx en secours (voir fallbacks)
+  - model_name: llm-agent
+    litellm_params:
+      model: openai/gpt-6-luna
+      api_key: os.environ/OPENAI_API_KEY
+    model_info:
+      id: agent-principal-openai
+
+  # --- Un fournisseur volontairement en panne, pour vérifier que la bascule marche
+  - model_name: llm-panne
+    litellm_params:
+      model: openai/gpt-6-luna
+      api_base: http://127.0.0.1:9   # rien n'écoute ici : connexion refusée
+      api_key: fausse-cle
+    model_info:
+      id: panne-simulee
 
 litellm_settings:
-  drop_params: true   # ignore les paramètres qu'un fournisseur ne connaît pas, au lieu d'échouer
+  drop_params: true        # ignore les paramètres qu'un fournisseur ne connaît pas
+  request_timeout: 15      # au-delà de 15 s, l'appel est considéré comme raté
+  num_retries: 2           # 2 nouvelles tentatives sur le même modèle avant d'abandonner
+  allowed_fails: 2         # au-delà de 2 échecs par minute, le modèle est mis au repos...
+  cooldown_time: 30        # ...pendant 30 secondes : on n'insiste pas sur un fournisseur qui tombe
+  fallbacks:
+    - { "llm-agent": ["llm-telnyx"] }   # si OpenAI échoue, l'agent continue sur Kimi (Telnyx)
+    - { "llm-panne": ["llm-telnyx"] }   # la panne simulée bascule aussi sur Telnyx
