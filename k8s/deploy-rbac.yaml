@@ -1,0 +1,47 @@
+# Compte de service du déploiement automatique : il n'agit QUE dans le namespace intake.
+# Helm y stocke ses révisions sous forme de Secrets, d'où l'accès aux secrets du namespace.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: deployer
+  namespace: intake
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: deployer
+  namespace: intake
+rules:
+  - apiGroups: [""]
+    resources: [pods, pods/log, services, configmaps, secrets, persistentvolumeclaims, events]
+    verbs: [get, list, watch, create, update, patch, delete]
+  - apiGroups: [apps]
+    resources: [deployments, statefulsets, replicasets]
+    verbs: [get, list, watch, create, update, patch, delete]
+  - apiGroups: [networking.k8s.io]
+    resources: [ingresses]
+    verbs: [get, list, watch, create, update, patch, delete]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: deployer
+  namespace: intake
+subjects:
+  - kind: ServiceAccount
+    name: deployer
+    namespace: intake
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: deployer
+---
+# Jeton longue durée du compte de service (lu une fois pour construire le kubeconfig du déploiement).
+apiVersion: v1
+kind: Secret
+metadata:
+  name: deployer-token
+  namespace: intake
+  annotations:
+    kubernetes.io/service-account.name: deployer
+type: kubernetes.io/service-account-token

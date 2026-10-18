@@ -1,0 +1,26 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: intake-gateway
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    cert-manager.io/cluster-issuer: {{ .Values.clusterIssuer }}
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - {{ .Values.host }}
+      secretName: intake-tls
+  rules:
+    - host: {{ .Values.host }}
+      http:
+        paths:
+          # Seules les routes Telnyx sont publiques ; /intake, /consultations, /call-ended et /docs
+          # restent internes (la passerelle les appelle elle-même en local).
+          - path: /telnyx
+            pathType: Prefix
+            backend:
+              service:
+                name: intake-gateway
+                port:
+                  number: 8000

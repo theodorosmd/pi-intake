@@ -1,0 +1,52 @@
+# Tout ce qui change d'un environnement à l'autre est ici ; les modèles (templates/) ne contiennent aucune valeur en dur.
+# Les Secrets (clés d'API, mot de passe de la base) ne sont PAS dans le chart : voir k8s/secrets.sh.
+
+host: intake.theappstudio.co          # adresse publique de la passerelle (DNS vers l'IP du serveur)
+clusterIssuer: letsencrypt-prod       # letsencrypt-staging pour tester sans limite
+imagePullSecret: ghcr-pull
+
+gateway:
+  image:
+    repository: ghcr.io/theodorosmd/intake-py
+    tag: "0.1.2"
+  # Mesuré le 18 oct. : ~270-293 Mi au repos comme en appel (la bibliothèque litellm pèse ~250 Mi).
+  resources:
+    requests:
+      cpu: 100m
+      memory: 300Mi
+    limits:
+      memory: 512Mi
+
+worker:
+  image:
+    repository: ghcr.io/theodorosmd/summary-worker
+    tag: "0.1.1"
+  # Mesuré : ~213-231 Mi au repos (litellm).
+  resources:
+    requests:
+      cpu: 50m
+      memory: 250Mi
+    limits:
+      memory: 512Mi
+
+litellm:
+  image:
+    repository: docker.litellm.ai/berriai/litellm
+    tag: latest                       # à épingler par digest
+  # Mesuré : ~590-656 Mi, stable.
+  resources:
+    requests:
+      cpu: 100m
+      memory: 650Mi
+    limits:
+      memory: 900Mi
+
+postgres:
+  image: postgres:16
+  storage: 2Gi
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      memory: 256Mi

@@ -1,0 +1,55 @@
+name: deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Étiquette de l'image intake-py à déployer (ex. sha-0a312e4)"
+        required: true
+
+concurrency: deploy-intake
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: azure/setup-helm@v4
+        with:
+          version: v4.0.0
+
+      - name: Ouvrir le tunnel SSH vers l'API Kubernetes
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key && chmod 600 ~/.ssh/deploy_key
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes -fN \
+            -L 6443:127.0.0.1:6443 "deployer@$DEPLOY_HOST"
+
+      - name: Configurer l'accès au cluster
+        env:
+          KUBECONFIG_DEPLOY: ${{ secrets.KUBECONFIG_DEPLOY }}
+        run: |
+          printf '%s' "$KUBECONFIG_DEPLOY" | base64 -d > "$RUNNER_TEMP/kubeconfig"
+          chmod 600 "$RUNNER_TEMP/kubeconfig"
+          echo "KUBECONFIG=$RUNNER_TEMP/kubeconfig" >> "$GITHUB_ENV"
+
+      - name: Déployer
+        run: |
+          helm upgrade --install intake ./chart -n intake \
+            --set gateway.image.tag="${{ inputs.tag }}" \
+            --force-conflicts --wait --timeout 5m
+
+      - name: Vérifier
+        run: |
+          helm history intake -n intake --max 3
+          helm get values intake -n intake
