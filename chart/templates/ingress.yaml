@@ -15,10 +15,18 @@ spec:
     - host: {{ .Values.host }}
       http:
         paths:
-          # Seules les routes Telnyx sont publiques ; /intake, /consultations, /call-ended et /docs
-          # restent internes (la passerelle les appelle elle-même en local).
+          # Seules les routes Telnyx et /mcp sont publiques ; /intake, /consultations, /call-ended
+          # et /docs restent internes (la passerelle les appelle elle-même en local).
           - path: /telnyx
             pathType: Prefix
+            backend:
+              service:
+                name: intake-gateway
+                port:
+                  number: 8000
+          # Serveur MCP du cabinet : protégé par jeton (MCP_TOKEN), refuse tout sans lui.
+          - path: /mcp
+            pathType: Exact
             backend:
               service:
                 name: intake-gateway
