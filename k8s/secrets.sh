@@ -24,6 +24,10 @@ rm -f "$tmp"
 kubectl -n $NS get secret litellm-db >/dev/null 2>&1 || \
   kubectl -n $NS create secret generic litellm-db --from-literal=POSTGRES_PASSWORD="$(openssl rand -hex 16)"
 
+# Mot de passe de la base de la passerelle : créé une fois, jamais affiché.
+kubectl -n $NS get secret intake-db >/dev/null 2>&1 || \
+  kubectl -n $NS create secret generic intake-db --from-literal=PASSWORD="$(openssl rand -hex 16)"
+
 kubectl -n $NS create configmap litellm-config --from-file=config.yaml=litellm/config.yaml \
   --dry-run=client -o yaml | kubectl apply -f -
 

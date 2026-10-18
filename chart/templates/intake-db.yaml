@@ -1,0 +1,122 @@
+# Base de la passerelle (dossiers, rendez-vous, résumés d'appels), hébergée dans le même Postgres
+# que LiteLLM pour économiser la mémoire du serveur, mais séparée : sa propre base et son propre
+# utilisateur, sans accès à la base de LiteLLM. Le mot de passe vient du secret intake-db (k8s/secrets.sh).
+#
+# Ce Job crée l'utilisateur et la base s'ils n'existent pas, et réaligne le mot de passe.
+# Il est relancé à chaque révision (idempotent) ; la passerelle attend qu'il ait fini (initContainer).
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: intake-db-init-{{ .Release.Revision }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  backoffLimit: 30            # LiteLLM-db peut mettre un moment à démarrer lors d'une installation neuve
+  ttlSecondsAfterFinished: 600
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: init
+          image: {{ .Values.postgres.image }}
+          env:
+            - name: PGHOST
+              value: litellm-db
+            - name: PGUSER
+              value: litellm          # administrateur de l'instance (créé par l'image postgres)
+            - name: PGDATABASE
+              value: litellm
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: litellm-db
+                  key: POSTGRES_PASSWORD
+            - name: INTAKE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: intake-db
+                  key: PASSWORD
+          command: ["bash", "-ec"]
+          args:
+            - |
+              until pg_isready -q; do sleep 2; done
+              psql -v ON_ERROR_STOP=1 -v pw="$INTAKE_PASSWORD" <<'SQL'
+              SELECT 'CREATE ROLE intake LOGIN' WHERE NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'intake') \gexec
+              ALTER ROLE intake PASSWORD :'pw';
+              SELECT 'CREATE DATABASE intake OWNER intake' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'intake') \gexec
+              REVOKE ALL ON DATABASE intake FROM PUBLIC;
+              REVOKE CONNECT ON DATABASE litellm FROM PUBLIC;
+              SQL
+              echo "Base intake prête."
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              memory: 64Mi
+---
+# Sauvegarde quotidienne de la base intake sur un volume du cluster, gardée {{ .Values.intakeDb.backup.retentionDays }} jours.
+# Elle protège d'une erreur (mauvaise migration, suppression) mais pas de la perte du serveur :
+# une copie hors du serveur viendra avec le passage sur un cloud.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: intake-db-backups
+  namespace: {{ .Release.Namespace }}
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: {{ .Values.intakeDb.backup.storage }}
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: intake-db-backup
+  namespace: {{ .Release.Namespace }}
+spec:
+  schedule: {{ .Values.intakeDb.backup.schedule | quote }}
+  timeZone: Europe/Paris
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 2
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: pg-dump
+              image: {{ .Values.postgres.image }}
+              env:
+                - name: PGHOST
+                  value: litellm-db
+                - name: PGUSER
+                  value: intake
+                - name: PGDATABASE
+                  value: intake
+                - name: PGPASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: intake-db
+                      key: PASSWORD
+              command: ["bash", "-ec"]
+              args:
+                - |
+                  fichier=/backups/intake-$(date +%Y%m%d-%H%M).dump
+                  pg_dump -Fc -f "$fichier"
+                  find /backups -name 'intake-*.dump' -mtime +{{ .Values.intakeDb.backup.retentionDays }} -delete
+                  ls -lh /backups
+              volumeMounts:
+                - name: backups
+                  mountPath: /backups
+              resources:
+                requests:
+                  cpu: 10m
+                  memory: 32Mi
+                limits:
+                  memory: 128Mi
+          volumes:
+            - name: backups
+              persistentVolumeClaim:
+                claimName: intake-db-backups

@@ -1,5 +1,6 @@
 # Passerelle d'appel : le seul service exposé à Internet (voir ingress.yaml).
-# 1 seul replica : dossiers et réservations vivent en mémoire (pas de partage entre copies).
+# Dossiers, rendez-vous et résumés sont dans Postgres (base intake). Toujours 1 seul replica :
+# l'état d'un appel en cours (conversation, flux audio) vit encore dans la mémoire du processus.
 apiVersion: v1
 kind: Service
 metadata:
@@ -19,7 +20,7 @@ metadata:
 spec:
   replicas: 1
   strategy:
-    type: Recreate   # pas deux copies en même temps pendant une mise à jour (état en mémoire)
+    type: Recreate   # pas deux copies en même temps pendant une mise à jour (appels en cours en mémoire)
   selector:
     matchLabels:
       app: intake-gateway
@@ -30,6 +31,23 @@ spec:
     spec:
       imagePullSecrets:
         - name: {{ .Values.imagePullSecret }}
+      # Attend que la base intake existe et accepte l'utilisateur intake (créés par le Job intake-db-init).
+      initContainers:
+        - name: attendre-la-base
+          image: {{ .Values.postgres.image }}
+          env:
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: intake-db
+                  key: PASSWORD
+          command: ["bash", "-c", "until psql -h litellm-db -U intake -d intake -c 'select 1' >/dev/null 2>&1; do echo 'base intake pas prête'; sleep 3; done"]
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              memory: 64Mi
       containers:
         - name: gateway
           image: {{ .Values.gateway.image.repository }}:{{ .Values.gateway.image.tag }}
@@ -45,6 +63,13 @@ spec:
               value: http://litellm:4000
             - name: WORKER_URL
               value: http://summary-worker:8000
+            - name: INTAKE_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: intake-db
+                  key: PASSWORD
+            - name: DATABASE_URL
+              value: postgresql://intake:$(INTAKE_DB_PASSWORD)@litellm-db:5432/intake
             - name: LLM_API_KEY
               valueFrom:
                 secretKeyRef:

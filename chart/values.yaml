@@ -50,3 +50,10 @@ postgres:
       memory: 128Mi
     limits:
       memory: 256Mi
+
+# Base de la passerelle, dans l'instance Postgres ci-dessus (voir templates/intake-db.yaml).
+intakeDb:
+  backup:
+    schedule: "30 3 * * *"            # chaque nuit à 3 h 30 (heure de Paris)
+    retentionDays: 7
+    storage: 1Gi
