@@ -5,7 +5,7 @@ metadata:
   name: intake-gateway
   namespace: intake
   annotations:
-    cert-manager.io/cluster-issuer: letsencrypt-staging
+    cert-manager.io/cluster-issuer: letsencrypt-prod
 spec:
   ingressClassName: traefik
   tls:
@@ -16,7 +16,9 @@ spec:
     - host: intake.theappstudio.co
       http:
         paths:
-          - path: /
+          # Seules les routes Telnyx sont publiques ; /intake, /consultations, /call-ended et /docs
+          # restent internes (la passerelle les appelle elle-même en local).
+          - path: /telnyx
             pathType: Prefix
             backend:
               service:

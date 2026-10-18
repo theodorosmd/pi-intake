@@ -28,7 +28,7 @@ spec:
         - name: ghcr-pull
       containers:
         - name: summary-worker
-          image: ghcr.io/theodorosmd/summary-worker:0.1.0
+          image: ghcr.io/theodorosmd/summary-worker:0.1.1
           ports:
             - containerPort: 8000
           envFrom:

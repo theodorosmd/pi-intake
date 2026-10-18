@@ -32,7 +32,7 @@ spec:
         - name: ghcr-pull
       containers:
         - name: gateway
-          image: ghcr.io/theodorosmd/intake-py:0.1.0
+          image: ghcr.io/theodorosmd/intake-py:0.1.2
           ports:
             - containerPort: 8000
           envFrom:
