@@ -1,0 +1,68 @@
+# Passerelle d'appel : le seul service exposé à Internet (voir 50-ingress.yaml).
+# 1 seul replica : dossiers et réservations vivent en mémoire (pas de partage entre copies).
+apiVersion: v1
+kind: Service
+metadata:
+  name: intake-gateway
+  namespace: intake
+spec:
+  selector:
+    app: intake-gateway
+  ports:
+    - port: 8000
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: intake-gateway
+  namespace: intake
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate   # pas deux copies en même temps pendant une mise à jour (état en mémoire)
+  selector:
+    matchLabels:
+      app: intake-gateway
+  template:
+    metadata:
+      labels:
+        app: intake-gateway
+    spec:
+      imagePullSecrets:
+        - name: ghcr-pull
+      containers:
+        - name: gateway
+          image: ghcr.io/theodorosmd/intake-py:0.1.0
+          ports:
+            - containerPort: 8000
+          envFrom:
+            - secretRef:
+                name: gateway-env
+          env:
+            - name: PUBLIC_HOST
+              value: intake.theappstudio.co
+            - name: LLM_API_BASE
+              value: http://litellm:4000
+            - name: WORKER_URL
+              value: http://summary-worker:8000
+            - name: LLM_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: gateway-llm-key
+                  key: LLM_API_KEY
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 100m
+              memory: 200Mi
+            limits:
+              memory: 400Mi

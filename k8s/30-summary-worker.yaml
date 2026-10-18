@@ -1,0 +1,52 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: summary-worker
+  namespace: intake
+spec:
+  selector:
+    app: summary-worker
+  ports:
+    - port: 8000
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: summary-worker
+  namespace: intake
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: summary-worker
+  template:
+    metadata:
+      labels:
+        app: summary-worker
+    spec:
+      imagePullSecrets:
+        - name: ghcr-pull
+      containers:
+        - name: summary-worker
+          image: ghcr.io/theodorosmd/summary-worker:0.1.0
+          ports:
+            - containerPort: 8000
+          envFrom:
+            - secretRef:
+                name: worker-env
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 50m
+              memory: 100Mi
+            limits:
+              memory: 256Mi

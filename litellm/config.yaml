@@ -22,7 +22,8 @@ model_list:
   # --- Le nom que l'agent utilisera : OpenAI d'abord, Telnyx en secours (voir fallbacks)
   - model_name: llm-agent
     litellm_params:
-      model: openai/gpt-6-luna
+      # gpt-4.1-mini : 1,2 s avant le premier mot contre 1,9 s pour gpt-6-luna (mesure_ttft.py, 17 oct.)
+      model: openai/gpt-4.1-mini
       api_key: os.environ/OPENAI_API_KEY
     model_info:
       id: agent-principal-openai

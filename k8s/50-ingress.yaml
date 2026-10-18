@@ -1,0 +1,25 @@
+# Passer à letsencrypt-prod une fois le certificat de test obtenu.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: intake-gateway
+  namespace: intake
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-staging
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - intake.theappstudio.co
+      secretName: intake-tls
+  rules:
+    - host: intake.theappstudio.co
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: intake-gateway
+                port:
+                  number: 8000

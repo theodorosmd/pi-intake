@@ -1,0 +1,76 @@
+# Proxy LiteLLM : interne au cluster (aucune route publique).
+# Image à épingler par digest à l'étape Helm (latest bouge sans prévenir).
+apiVersion: v1
+kind: Service
+metadata:
+  name: litellm
+  namespace: intake
+spec:
+  selector:
+    app: litellm
+  ports:
+    - port: 4000
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: litellm
+  namespace: intake
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: litellm
+  template:
+    metadata:
+      labels:
+        app: litellm
+    spec:
+      containers:
+        - name: litellm
+          image: docker.litellm.ai/berriai/litellm:latest
+          args: ["--config", "/app/config.yaml"]
+          ports:
+            - containerPort: 4000
+          envFrom:
+            - secretRef:
+                name: litellm-env
+          env:
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: litellm-db
+                  key: POSTGRES_PASSWORD
+            - name: DATABASE_URL
+              value: postgresql://litellm:$(POSTGRES_PASSWORD)@litellm-db:5432/litellm
+          startupProbe:
+            httpGet:
+              path: /health/liveliness
+              port: 4000
+            periodSeconds: 5
+            failureThreshold: 36   # jusqu'à 3 min : migrations de la base au premier démarrage
+          readinessProbe:
+            httpGet:
+              path: /health/readiness
+              port: 4000
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health/liveliness
+              port: 4000
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 100m
+              memory: 400Mi
+            limits:
+              memory: 900Mi
+          volumeMounts:
+            - name: config
+              mountPath: /app/config.yaml
+              subPath: config.yaml
+              readOnly: true
+      volumes:
+        - name: config
+          configMap:
+            name: litellm-config
