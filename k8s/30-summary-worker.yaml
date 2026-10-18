@@ -45,8 +45,9 @@ spec:
               port: 8000
             periodSeconds: 20
           resources:
+            # Mesuré le 18 oct. : ~231 Mi au repos (litellm). L'ancienne limite à 256 Mi aurait tué le pod au premier résumé.
             requests:
               cpu: 50m
-              memory: 100Mi
+              memory: 250Mi
             limits:
-              memory: 256Mi
+              memory: 512Mi

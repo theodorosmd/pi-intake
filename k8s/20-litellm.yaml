@@ -60,9 +60,10 @@ spec:
               port: 4000
             periodSeconds: 20
           resources:
+            # Mesuré le 18 oct. : ~656 Mi, stable.
             requests:
               cpu: 100m
-              memory: 400Mi
+              memory: 650Mi
             limits:
               memory: 900Mi
           volumeMounts:
