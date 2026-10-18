@@ -31,7 +31,7 @@ spec:
     spec:
       imagePullSecrets:
         - name: {{ .Values.imagePullSecret }}
-      # Attend que la base intake existe et accepte l'utilisateur intake (créés par le Job intake-db-init).
+      # Attend que la base intake soit prête (créée et équipée par le Job intake-db-init).
       initContainers:
         - name: attendre-la-base
           image: {{ .Values.postgres.image }}
@@ -41,7 +41,8 @@ spec:
                 secretKeyRef:
                   name: intake-db
                   key: PASSWORD
-          command: ["bash", "-c", "until psql -h litellm-db -U intake -d intake -c 'select 1' >/dev/null 2>&1; do echo 'base intake pas prête'; sleep 3; done"]
+          # Prête = l'utilisateur intake se connecte ET pgvector est installé (sinon le schéma échouerait).
+          command: ["bash", "-c", "until psql -h litellm-db -U intake -d intake -tAc \"select 1 from pg_extension where extname = 'vector'\" 2>/dev/null | grep -q 1; do echo 'base intake pas prête'; sleep 3; done"]
           resources:
             requests:
               cpu: 10m

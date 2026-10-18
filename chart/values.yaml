@@ -42,7 +42,9 @@ litellm:
       memory: 900Mi
 
 postgres:
-  image: postgres:16
+  # Postgres 16 + l'extension pgvector (même base Debian que l'image officielle, données compatibles) :
+  # la base intake y range les vecteurs de la base de connaissances (RAG).
+  image: pgvector/pgvector:pg16
   storage: 2Gi
   resources:
     requests:

@@ -2,7 +2,8 @@
 # que LiteLLM pour économiser la mémoire du serveur, mais séparée : sa propre base et son propre
 # utilisateur, sans accès à la base de LiteLLM. Le mot de passe vient du secret intake-db (k8s/secrets.sh).
 #
-# Ce Job crée l'utilisateur et la base s'ils n'existent pas, et réaligne le mot de passe.
+# Ce Job crée l'utilisateur et la base s'ils n'existent pas, réaligne le mot de passe et installe
+# l'extension pgvector dans la base intake (recherche dans la base de connaissances).
 # Il est relancé à chaque révision (idempotent) ; la passerelle attend qu'il ait fini (initContainer).
 apiVersion: batch/v1
 kind: Job
@@ -46,6 +47,8 @@ spec:
               REVOKE ALL ON DATABASE intake FROM PUBLIC;
               REVOKE CONNECT ON DATABASE litellm FROM PUBLIC;
               SQL
+              # pgvector demande un administrateur pour être installé ; la passerelle s'en sert ensuite.
+              psql -v ON_ERROR_STOP=1 -d intake -c "CREATE EXTENSION IF NOT EXISTS vector"
               echo "Base intake prête."
           resources:
             requests:
