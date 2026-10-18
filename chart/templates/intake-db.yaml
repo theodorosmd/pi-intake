@@ -57,6 +57,11 @@ spec:
 # Sauvegarde quotidienne de la base intake sur un volume du cluster, gardée {{ .Values.intakeDb.backup.retentionDays }} jours.
 # Elle protège d'une erreur (mauvaise migration, suppression) mais pas de la perte du serveur :
 # une copie hors du serveur viendra avec le passage sur un cloud.
+#
+# Attention, installation neuve : sur k3s (local-path), un volume n'est créé qu'au premier pod qui
+# l'utilise. Tant que la première sauvegarde n'a pas tourné, il reste « Pending » et `helm --wait`
+# échoue au bout du délai. Lancer une sauvegarde à la main règle le problème une fois pour toutes :
+#   kubectl -n intake create job --from=cronjob/intake-db-backup premiere-sauvegarde
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
