@@ -1,0 +1,7 @@
+# L'état contient le mot de passe de la base : il ne va jamais dans git.
+*.tfstate
+*.tfstate.*
+.terraform/
+terraform.tfvars
+*.tfplan
+crash.log

@@ -1,0 +1,6 @@
+# Copier en terraform.tfvars (ignoré par git) et remplir.
+subscription_id = "00000000-0000-0000-0000-000000000000"   # az account show --query id -o tsv
+alert_email     = "toi@exemple.com"                         # reçoit les alertes de budget et de crédits CPU
+# location       = "francecentral"
+# gateway_tag    = "sha-2f103d2"
+# budget_mensuel = 70

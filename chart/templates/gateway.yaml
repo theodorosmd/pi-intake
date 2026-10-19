@@ -64,6 +64,8 @@ spec:
               value: http://litellm:4000
             - name: WORKER_URL
               value: http://summary-worker:8000
+            - name: TTS_MODEL
+              value: {{ .Values.gateway.ttsModel }}
             - name: INTAKE_DB_PASSWORD
               valueFrom:
                 secretKeyRef:

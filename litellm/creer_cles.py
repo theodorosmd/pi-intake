@@ -5,11 +5,12 @@ Les services l'utilisent à la place de la clé maître : on peut la limiter, la
 """
 
 import json
+import os
 import urllib.error
 import urllib.request
 from pathlib import Path
 
-PROXY = "http://localhost:4000"
+PROXY = os.environ.get("PROXY", "http://localhost:4000")
 DOSSIER = Path(__file__).parent
 
 cle_maitre = next(
@@ -56,7 +57,7 @@ for alias, reglages in CLES.items():
           f"{reglages['rpm_limit']} req/min)")
 
 if lignes:
-    fichier = DOSSIER / "cles-virtuelles.env"
+    fichier = DOSSIER / os.environ.get("FICHIER_CLES", "cles-virtuelles.env")
     with fichier.open("a") as f:
         f.write("\n".join(lignes) + "\n")
     fichier.chmod(0o600)

@@ -9,6 +9,8 @@ gateway:
   image:
     repository: ghcr.io/theodorosmd/intake-py
     tag: "0.1.2"
+  # Mesuré le 19 oct. : l'alias openai/gpt-4o-mini-tts reste sans réponse une fois sur deux ; tts-1 : 20/20 en moins de 3 s.
+  ttsModel: openai/tts-1
   # Mesuré le 18 oct. : ~270-293 Mi au repos comme en appel (la bibliothèque litellm pèse ~250 Mi).
   resources:
     requests:

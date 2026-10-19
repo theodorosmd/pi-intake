@@ -45,6 +45,8 @@ spec:
               value: http://litellm:4000
             - name: WORKER_URL
               value: http://summary-worker:8000
+            - name: TTS_MODEL
+              value: openai/tts-1
             - name: LLM_API_KEY
               valueFrom:
                 secretKeyRef:
