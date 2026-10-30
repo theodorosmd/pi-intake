@@ -24,7 +24,7 @@ locals {
   # Variables d'environnement lues dans Key Vault, par application. Ce sont les noms des clés des
   # fichiers .env (jamais leurs valeurs). PUBLIC_HOST, LLM_API_BASE et WORKER_URL sont fixés plus bas.
   secrets_par_app = {
-    gateway = ["TELNYX_API_KEY", "TELNYX_PUBLIC_KEY", "OPENAI_API_KEY", "LLM_MODEL", "MCP_TOKEN", "LLM_API_KEY"]
+    gateway = ["TELNYX_API_KEY", "TELNYX_PUBLIC_KEY", "OPENAI_API_KEY", "LLM_MODEL", "MCP_TOKEN", "STAFF_API_TOKEN", "LLM_API_KEY"]
     worker  = ["OPENAI_API_KEY", "LLM_MODEL"]
     litellm = ["OPENAI_API_KEY", "TELNYX_API_KEY", "LITELLM_MASTER_KEY", "LITELLM_SALT_KEY"]
   }

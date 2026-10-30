@@ -39,7 +39,7 @@ On peut aussi relancer le workflow `deploy` avec l'étiquette d'une image plus a
 
 ## Secrets
 
-Les mots de passe et clés ne sont pas dans ce dépôt. Le script `k8s/secrets.sh` crée les secrets du cluster à partir de fichiers `.env` locaux, qui sont ignorés par git.
+Les mots de passe et clés ne sont pas dans ce dépôt. Le `.env` de `intake-py` doit contenir `STAFF_API_TOKEN` (API du tableau de bord du cabinet, `/staff`) : sans lui, ces routes répondent 503. L'application web `intake-desk` (dépôt `ai-labs`) utilise la même valeur. Le script `k8s/secrets.sh` crée les secrets du cluster à partir de fichiers `.env` locaux, qui sont ignorés par git.
 
 ## Limites connues
 
